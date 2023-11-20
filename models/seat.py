@@ -4,8 +4,8 @@ from typing import Optional
 
 
 class Seat:
-    def __init__(self, seat_number: str, is_reserved: bool = False, booked_by: Optional[Customer] = None):
-        self.seat_number: str = seat_number
+    def __init__(self, seat_number: int, is_reserved: bool = False, booked_by: Optional[Customer] = None):
+        self.seat_number: int = seat_number
         self.is_reserved: bool = is_reserved
         self.booked_by: Optional[Customer] = booked_by
 

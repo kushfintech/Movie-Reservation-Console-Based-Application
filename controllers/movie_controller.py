@@ -36,8 +36,8 @@ def show_all_movies():
         print("No Movies Found")
         return
 
-    headers = ["Movie ID", "Title", "Duration", "Rating", "Showing Times"]
-    column_widths = [max(len(header), max((len(str(getattr(movie, attr))) for movie in movies), default=0)) for header, attr in zip(headers, ['movie_id', 'title', 'duration', 'rating', 'showing_times'])]
+    headers = ["Movie ID", "Title", "Duration", "Rating"]
+    column_widths = [max(len(header), max((len(str(getattr(movie, attr))) for movie in movies), default=0)) for header, attr in zip(headers, ['movie_id', 'title', 'duration', 'rating'])]
 
     header_row = " | ".join(header.ljust(width) for header, width in zip(headers, column_widths))
     print(header_row)
@@ -45,16 +45,74 @@ def show_all_movies():
 
     for movie in movies:
         # Format each showing time to a string and join the list into a single string
-        showing_times_formatted = ", ".join(show_time.strftime("%I:%M %p") for show_time in movie.showing_times)
         movie_details = [
             str(movie.movie_id),
             movie.title,
             f"{movie.duration} min",
-            f"{movie.rating if movie.rating is not None else 'N/A'}",
-            showing_times_formatted
+            f"{movie.rating if movie.rating is not None else 'N/A'}"
         ]
         row = " | ".join(detail.ljust(width) for detail, width in zip(movie_details, column_widths))
         print(row)
+
+
+def show_movie_details_by_name(movie_title):
+    # Load movies
+    movies = load_movies()  # Assuming this function is defined to load movie data
+
+    # Find the movie with the given title
+    movie = next((mv for mv in movies if mv.title.lower() == movie_title.lower()), None)
+    if not movie:
+        print(f"No movie found with title '{movie_title}'")
+        return
+
+    # Prepare movie data for display
+    movie_data = {
+        "Movie ID": movie.movie_id,
+        "Title": movie.title,
+        "Duration": f"{movie.duration} min",
+        # Add other relevant fields as necessary, e.g., director, genre, etc.
+    }
+
+    # Define table headers
+    headers = movie_data.keys()
+
+    # Calculate column widths
+    column_widths = {header: max(len(header), len(str(movie_data[header]))) for header in headers}
+
+    # Print table header
+    header_row = " | ".join(header.ljust(column_widths[header]) for header in headers)
+    print(header_row)
+    print("-" * len(header_row))
+
+    # Print movie details
+    row = " | ".join(str(movie_data[header]).ljust(column_widths[header]) for header in headers)
+    print(row)
+
+
+def select_movie():
+    # Load movies, assuming this function returns a list of Movie objects
+    movies = load_movies()
+
+    if not movies:
+        print("No movies found.")
+        return None
+
+    # Create a list of choices for inquirer
+    movie_choices = [(f"{movie.title} ({movie.duration} minutes)", movie.movie_id) for movie in movies]
+
+    question = [
+        inquirer.List('movie',
+                      message="Select a movie:",
+                      choices=movie_choices,
+                      carousel=True)
+    ]
+
+    # Prompt the user to choose a movie
+    answers = inquirer.prompt(question)
+
+    # Find and return the selected movie
+    selected_movie_id = answers['movie']
+    return next((movie for movie in movies if movie.movie_id == selected_movie_id), None)
 
 
 def get_movie_id_using_interactive_console():
@@ -64,7 +122,7 @@ def get_movie_id_using_interactive_console():
     # Ask the user to select a movie
     movie_question = [
         inquirer.List('movie',
-                      message="Which movie would you like to create a session for?",
+                      message="Select Movie",
                       choices=movie_choices,
                       carousel=True)
     ]
@@ -92,11 +150,10 @@ def parse_str_to_time(time_str):
         return None
 
 
-def add_movie(title, duration, showing_times):
+def add_movie(title, duration):
     movies = load_movies()
     movie_id = max(movie.movie_id for movie in movies) + 1 if movies else 1
-    showing_times = [parse_showing_time(time_str) for time_str in showing_times]
-    new_movie = Movie(movie_id=movie_id, title=title, duration=duration, showing_times=showing_times)
+    new_movie = Movie(movie_id=movie_id, title=title, duration=duration)
     movies.append(new_movie)
     save_movies(movies)
     print("Movie Added Successfully!")
@@ -109,31 +166,34 @@ def remove_movie(movie_id):
     show_all_movies()
 
 
-def add_showing_time(movie_id, time):
-    movies = load_movies()
-    for movie in movies:
-        if movie.movie_id == movie_id:
-            movie.showing_times.append(parse_showing_time(time))
-    save_movies(movies)
+def update_movie(movie_id, title=None, duration=None, rating=None):
+    """
+    Update the details of an existing movie.
 
-
-def remove_showing_time(movie_id, time_str):
+    :param movie_id: The ID of the movie to update.
+    :param title: The new title of the movie.
+    :param duration: The new duration of the movie.
+    :param rating: The new rating of the movie.
+    """
     movies = load_movies()
-    # Parse the time string into a time object
-    time_to_remove = parse_str_to_time(time_str)
-    if time_to_remove is None:
-        return
+    updated = False
 
     for movie in movies:
         if movie.movie_id == movie_id:
-            # Filter out showing times when the time part matches time_to_remove
-            movie.showing_times = [
-                show_time for show_time in movie.showing_times
-                if show_time.time() != time_to_remove
-            ]
+            if title != "":
+                movie.title = title
+            if duration != "":
+                movie.duration = duration
+            if rating != "":
+                movie.rating = rating
+            updated = True
+            break
 
-    save_movies(movies)
-    print("Showing time removed successfully.")
+    if updated:
+        save_movies(movies)
+        print(f"Movie with ID {movie_id} has been updated successfully.")
+    else:
+        print(f"Movie with ID {movie_id} not found.")
 
 
 def get_movie_using_id(movie_id):
@@ -147,49 +207,6 @@ def get_movie_using_id(movie_id):
     return next((movie for movie in all_movies if movie.movie_id == movie_id), None)
 
 
-def get_showing_times_of_movie(movie: Movie):
-    """
-    Retrieve the showing times for a given movie.
-
-    :param movie: The movie object.
-    :return: A list of showing times for the movie.
-    """
-    if movie is not None:
-        return movie.showing_times
-    else:
-        return []
-
-
 def format_show_time_for_display(show_time):
     """Convert a datetime object to a nicely formatted string."""
     return show_time.strftime("%I:%M %p")
-
-
-def get_show_time_using_interactive_console(showing_times):
-    """
-    Use inquirer to let the user select a showtime from a list.
-
-    :param showing_times: A list of datetime objects representing show times.
-    :return: The selected datetime object.
-    """
-    if not showing_times:
-        print("No showing times available.")
-        return None
-
-    show_time_choices = [format_show_time_for_display(show_time) for show_time in showing_times]
-
-    questions = [
-        inquirer.List('show_time',
-                      message="Choose a show time:",
-                      choices=show_time_choices,
-                      carousel=True)
-    ]
-
-    answer = inquirer.prompt(questions)
-
-    # Convert the selected show time back to a datetime object
-    selected_show_time_str = answer['show_time']
-    selected_show_time = parse_showing_time(selected_show_time_str)
-
-    return selected_show_time
-

@@ -1,8 +1,9 @@
-from controllers.staff_controller import load_staffs, register, login
+from controllers.staff_controller import (load_staffs, register, login, show_all_staffs, delete_account, get_staff_id,
+                                          update_profile)
 from views.movie_view import manage_movie_menu
 from views.sessions_view import manage_sessions_menu
 from views.customer_view import manage_customer_menu
-from views.reservation_menu import manage_reservation_menu
+from views.reservation_view import manage_reservation_menu
 
 
 def check_staff_exists_or_not():
@@ -26,8 +27,6 @@ def staff_non_logged_in_menu():
         print("\n MRS>Staffs")
         print("1. Login")
         print("2. Back")
-        print("3. Main Menu")
-        print("4. Exit")
         choice = input("Enter choice: ")
         if choice == "1":
             email = input("Enter your email address: ")
@@ -37,33 +36,50 @@ def staff_non_logged_in_menu():
                 staff_logged_in_menu()
         elif choice == "2":
             return
-        elif choice == "3":
-            return
-        elif choice == "4":
-            break
         else:
             print("Invalid choice, please try again.")
 
 
 def manage_staff_menu():
     while True:
-        print("\n MRS>Staffs")
-        print("1. Login")
-        print("2. Back")
-        print("3. Main Menu")
-        print("4. Exit")
-        choice = input("Enter choice: ")
+        print("\n MRS>Manage Staffs")
+        print("1. View Staffs")
+        print("2. Add Staff")
+        print("3. Update Staff")
+        print("4. Remove Staff")
+        print("5. Back")
+        choice = input("Enter your choice: ")
         if choice == "1":
-            email = input("Enter your email address: ")
-            password = input("Enter your password: ")
-            result = login(email=email, password=password)
-            if result:
-                staff_logged_in_menu()
+            show_all_staffs()
         elif choice == "2":
-            return
+            name = input("Enter Staff Full Name: ")
+            email = input("Enter Staff Email Address: ")
+            password = input("Enter New Password: ")
+            c_password = input("Enter Staff New Password Again: ")
+            address = input("Enter Staff Living Address(Optional): ")
+            country = input("Enter Staff Country Name(Optional): ")
+            if password == c_password:
+                register(name=name, email=email, password=password, address=address, country=country)
+            else:
+                print("Both password does not matched")
         elif choice == "3":
-            return
+            staff_id = get_staff_id()
+            if staff_id:
+                name = input("Enter Staff Full Name: ")
+                email = input("Enter Staff Email Address: ")
+                address = input("Enter Staff Living Address(Optional): ")
+                country = input("Enter Staff Country Name(Optional): ")
+                success = update_profile(staff_id=staff_id, name=name, email=email, address=address, country=country,
+                                         password=None)
+                if success:
+                    print(f"Staff with Id: {staff_id} updated successfully!")
         elif choice == "4":
+            staff_id = get_staff_id()
+            if staff_id:
+                success = delete_account(staff_id)
+                if success:
+                    print(f"Staff with Id: {staff_id} deleted successfully!")
+        elif choice == "5":
             break
         else:
             print("Invalid choice, please try again.")
@@ -72,28 +88,25 @@ def manage_staff_menu():
 def staff_logged_in_menu():
     while True:
         print("\n MRS>Staffs>Menu")
-        print("1. Movies")
-        print("2. Movies Sessions")
-        print("3. Reservations")
-        print("4. Customers")
-        print("5. Staffs")
+        print("1. Staffs")
+        print("2. Customers")
+        print("3. Movies")
+        print("4. Movie Shows")
+        print("5. Reservations")
         print("6. Back")
-        print("8. Exit")
         choice = input("Enter choice: ")
         if choice == "1":
-            manage_movie_menu()
-        elif choice == "2":
-            manage_sessions_menu()
-        elif choice == "3":
-            manage_reservation_menu()
-        elif choice == "4":
-            manage_customer_menu()
-        elif choice == "5":
             manage_staff_menu()
+        elif choice == "2":
+            manage_customer_menu()
+        elif choice == "3":
+            manage_movie_menu()
+        elif choice == "4":
+            manage_sessions_menu()
+        elif choice == "5":
+            manage_reservation_menu()
         elif choice == "6":
             return
-        elif choice == "7":
-            break
         else:
             print("Invalid choice, please try again.")
 

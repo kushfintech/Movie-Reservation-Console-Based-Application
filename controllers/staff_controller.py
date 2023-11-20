@@ -1,4 +1,7 @@
 from typing import Optional
+
+import inquirer
+
 from models.staff import Staff
 import json
 
@@ -19,36 +22,33 @@ def save_staffs(staffs):
         # Ensure that we write an empty list to the file if there are no movies
         json.dump([staff.to_dict() for staff in staffs] or [], f)
 
-
 def show_all_staffs():
-    # Load movies and print all the details of the movie
     staffs = load_staffs()
     if not staffs:
         print("No Staffs Found")
         return
 
-    # Define the table headers
-    headers = ("Staff ID", "Name", "Email", "Password", "Address", "Country")
-    # Find the maximum width for each column
-    column_widths = [max(len(str(getattr(staff, attr))) for staff in staffs) for attr in headers]
-    column_widths = [max(len(header), width) for header, width in zip(headers, column_widths)]
+    # Define the table headers and corresponding attribute names in the Staff class
+    headers = ["Staff ID", "Name", "Email", "Password", "Address", "Country"]
+    attributes = ["staff_id", "name", "email", "password", "address", "country"]
+
+    # Calculate the maximum width for each column
+    column_widths = [
+        max(len(header), max((len(str(getattr(staff, attr))) for staff in staffs), default=0))
+        for header, attr in zip(headers, attributes)
+    ]
 
     # Print table header
-    header_row = " | ".join(header.ljust(width) for header, width in zip(headers, column_widths))
+    header_row = " | ".join(header.ljust(column_widths[idx]) for idx, header in enumerate(headers))
     print(header_row)
     print("-" * len(header_row))  # Print a divider line
 
     # Print the staff rows
     for staff in staffs:
-        staff_details = (
-            str(staff.staff_id),
-            staff.name,
-            staff.email,
-            '*' * len(staff.password),  # Replace password with asterisks for privacy
-            staff.address,
-            staff.country
-        )
-        row = " | ".join(detail.ljust(width) for detail, width in zip(staff_details, column_widths))
+        staff_details = [str(getattr(staff, attr)) for attr in attributes]
+        # Mask the password field for privacy
+        staff_details[attributes.index("password")] = '*' * len(staff_details[attributes.index("password")])
+        row = " | ".join(detail.ljust(column_widths[idx]) for idx, detail in enumerate(staff_details))
         print(row)
 
 
@@ -68,7 +68,7 @@ def register(name: str, email: str, password: str, address: Optional[str], count
 
 def delete_account(staff_id):
     staffs = load_staffs()
-    staffs = [staff for staff in staffs if staff.movie_id != staff_id]
+    staffs = [staff for staff in staffs if staff.staff_id != staff_id]
     save_staffs(staffs)
 
 
@@ -77,15 +77,13 @@ def update_profile(staff_id, name=None, email=None, password=None, address=None,
     staff = next((staff for staff in staffs if staff.staff_id == staff_id), None)
     # If the staff is found, update the fields
     if staff:
-        if name is not None:
+        if name != "" and not None:
             staff.name = name
-        if email is not None:
+        if email != "" and not None:
             staff.email = email
-        if password is not None:
-            staff.password = password
-        if address is not None:
+        if address != "" and not None:
             staff.address = address
-        if country is not None:
+        if country != "" and not None:
             staff.country = country
         # Call save_staffs to write the updates to the JSON file
         save_staffs(staffs)
@@ -109,3 +107,17 @@ def login(email: str, password: str):
         print("Account doesn't exists for this email")
         return False  # Return False to indicate account does not exist for this email
 
+
+def get_staff_id():
+    staffs = load_staffs()
+    staff_choices = [(f"{staff.staff_id} - {staff.name} - {staff.email}", staff.staff_id) for staff in staffs]
+
+    # Ask the user to select a movie
+    staff_question = [
+        inquirer.List('staff',
+                      message="Select staff",
+                      choices=staff_choices,
+                      carousel=True)
+    ]
+    selected_staff_id = inquirer.prompt(staff_question)['staff']
+    return selected_staff_id

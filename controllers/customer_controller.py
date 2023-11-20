@@ -1,4 +1,7 @@
 from typing import Optional
+
+import inquirer
+
 from models.customer import Customer
 import json
 
@@ -19,37 +22,31 @@ def save_customers(customers):
         # Ensure that we write an empty list to the file if there are no movies
         json.dump([customer.to_dict() for customer in customers] or [], f)
 
-
 def show_all_customers():
-    # Load movies and print all the details of the movie
     customers = load_customers()
     if not customers:
         print("No Customers Found")
         return
 
-    # Define the table headers
-    headers = ("Customer ID", "Name", "Email", "Password", "Address", "Country")
+    # Define the table headers and corresponding attribute names in the Customer class
+    headers = ["Customer ID", "Name", "Email", "Address", "Country"]
+    attributes = ["cust_id", "name", "email", "address", "country"]  # Update these according to your Customer class
 
-    # Find the maximum width for each column
-    column_widths = [max(len(str(getattr(customer, attr))) for customer in customers) for attr in headers]
-    column_widths = [max(len(header), width) for header, width in zip(headers, column_widths)]
+    # Calculate the maximum width for each column
+    column_widths = [
+        max(len(header), max((len(str(getattr(customer, attr))) for customer in customers), default=0))
+        for header, attr in zip(headers, attributes)
+    ]
 
     # Print table header
-    header_row = " | ".join(header.ljust(width) for header, width in zip(headers, column_widths))
+    header_row = " | ".join(header.ljust(column_widths[idx]) for idx, header in enumerate(headers))
     print(header_row)
     print("-" * len(header_row))  # Print a divider line
 
     # Print the customer rows
     for customer in customers:
-        customer_details = (
-            str(customer.cust_id),
-            customer.name,
-            customer.email,
-            '*' * len(customer.password),  # Replace password with asterisks for privacy
-            customer.address,
-            customer.country
-        )
-        row = " | ".join(detail.ljust(width) for detail, width in zip(customer_details, column_widths))
+        customer_details = [str(getattr(customer, attr)) for attr in attributes]
+        row = " | ".join(detail.ljust(column_widths[idx]) for idx, detail in enumerate(customer_details))
         print(row)
 
 
@@ -69,8 +66,9 @@ def register(name: str, email: str, password: str, address: Optional[str], count
 
 def delete_account(cust_id):
     customers = load_customers()
-    customers = [customer for customer in customers if customer.movie_id != cust_id]
+    customers = [customer for customer in customers if customer.cust_id != cust_id]
     save_customers(customers)
+    return True
 
 
 def update_profile(cust_id, name=None, email=None, password=None, address=None, country=None):
@@ -78,15 +76,15 @@ def update_profile(cust_id, name=None, email=None, password=None, address=None, 
     customer = next((cust for cust in customers if cust.cust_id == cust_id), None)
     # If the customer is found, update the fields
     if customer:
-        if name is not None:
+        if name is not "":
             customer.name = name
-        if email is not None:
+        if email is not "":
             customer.email = email
-        if password is not None:
+        if password is not "":
             customer.password = password
-        if address is not None:
+        if address is not "":
             customer.address = address
-        if country is not None:
+        if country is not "":
             customer.country = country
         # Call save_customers to write the updates to the JSON file
         save_customers(customers)
@@ -108,4 +106,66 @@ def login(email: str, password: str):
     else:
         print("Account doesn't exists for this email")
         return False  # Return False to indicate account does not exist for this email
+
+
+def get_cust_id():
+    customers = load_customers()
+    customer_choices = [(f"{customer.cust_id} - {customer.name} - {customer.email}", customer.cust_id) for customer in customers]
+
+    # Ask the user to select a movie
+    customer_question = [
+        inquirer.List('customer',
+                      message="Select Customer",
+                      choices=customer_choices,
+                      carousel=True)
+    ]
+    selected_cust_id = inquirer.prompt(customer_question)['customer']
+    return selected_cust_id
+
+
+def get_customer_by_id(customer_id):
+    customers = load_customers()
+    # Find the customer with the given customer_id
+    customer = next((cust for cust in customers if cust.cust_id == customer_id), None)
+    if customer is not None:
+        return customer
+    else:
+        print(f"No customer found with ID {customer_id}")
+        return None
+
+
+def show_customer_details_by_id(cust_id):
+    # Load customers
+    customers = load_customers()  # Assuming this function is defined to load customer data
+
+    # Find the customer with the given ID
+    customer = next((cust for cust in customers if str(cust.cust_id) == cust_id), None)
+    if not customer:
+        print(f"No customer found with ID {cust_id}")
+        return
+
+    # Prepare customer data for display
+    customer_data = {
+        "Customer ID": customer.cust_id,
+        "Name": customer.name,
+        "Email": customer.email,
+        "Address": customer.address,
+        "Country": customer.country
+        # Add other relevant fields as necessary
+    }
+
+    # Define table headers
+    headers = customer_data.keys()
+
+    # Calculate column widths
+    column_widths = {header: max(len(header), len(str(customer_data[header]))) for header in headers}
+
+    # Print table header
+    header_row = " | ".join(header.ljust(column_widths[header]) for header in headers)
+    print(header_row)
+    print("-" * len(header_row))
+
+    # Print customer details
+    row = " | ".join(str(customer_data[header]).ljust(column_widths[header]) for header in headers)
+    print(row)
 
