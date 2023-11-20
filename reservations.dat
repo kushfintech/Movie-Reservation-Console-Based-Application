@@ -1,0 +1,30 @@
+[
+    {
+        "reservation_id": 1,
+        "customer_id": 1,
+        "movie_session": 1,
+        "seats": [
+            {
+                "seat_number": 1,
+                "is_reserved": true,
+                "booked_by": 1
+            }
+        ],
+        "reserved_datetime": "2023-11-19 11:26:AM",
+        "status": "RESERVED"
+    },
+    {
+        "reservation_id": 2,
+        "customer_id": 1,
+        "movie_session": 1,
+        "seats": [
+            {
+                "seat_number": 2,
+                "is_reserved": true,
+                "booked_by": 1
+            }
+        ],
+        "reserved_datetime": "2023-11-19 11:26:AM",
+        "status": "RESERVED"
+    }
+]
